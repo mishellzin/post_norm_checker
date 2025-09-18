@@ -3,8 +3,17 @@ from tkinter import filedialog
 import copy
 
 # CONSTANTS
-TERM_DICT_TEMPLATE = {"termo": None, "classe": None, "subclasse": None, "in_vocabulum?": None}
+TERM_DICT_TEMPLATE = {"termo": None, "classe": None, "subclasse": None, "in_vocabulum?": None, "justification":None}
 TERM_COLUMN_NAMES = ["novo_nome", "novo_assunto", "novo_local", "novo_descrel"]
+
+def set_justification(termo, classe):
+    output = "AVERIGUAR"
+
+    if classe == "descrel": output = "DESCREL"
+    if ("[" or "OU") in str(termo): output = "INDETERMINACAO"
+    if classe == "entidade coletiva": output = "ENTIDADE COLETIVA"
+
+    return output
 
 # VARIABLES
 term_output = []
@@ -18,11 +27,9 @@ if __name__ == "__main__":
         for column_name in TERM_COLUMN_NAMES:
             cell_content = row[column_name]
 
-            # skip empty / NaN cells
             if pd.isna(cell_content):
                 continue
 
-            # split by ";" into terms
             terms = str(cell_content).split(";")
 
             for term in terms:
@@ -30,17 +37,19 @@ if __name__ == "__main__":
                 if not term:
                     continue
 
-                # create a fresh dict
                 temp_dict = copy.deepcopy(TERM_DICT_TEMPLATE)
                 temp_dict["termo"] = term
                 temp_dict["classe"] = column_name.replace("novo_", "")
                 temp_dict["subclasse"] = row["subtipo"]
-                temp_dict["in_vocabulum?"] = "SIM" if term in df_vocabulum["termo"].values else "NÃO"
+                if term in df_vocabulum["termo"].values:
+                    temp_dict["in_vocabulum?"] = "SIM"
+                    temp_dict["justification"] = "--"
+                else:
+                    temp_dict["in_vocabulum?"] = "NÃO"
+                    temp_dict["justification"] = set_justification(temp_dict["termo"], temp_dict["classe"])
 
-                # add to results
                 term_output.append(temp_dict)
 
-    # build DataFrame directly
     df_output = pd.DataFrame(term_output)
 
-    df_output.to_excel("posnorm_check.xlsx", index=False)
+    df_output.to_excel("postnorm_check.xlsx", index=False)
